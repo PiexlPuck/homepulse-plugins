@@ -1,0 +1,38 @@
+{
+    "id": "nginx-proxy-manager",
+    "name": "Nginx Proxy Manager",
+    "version": "1.0.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "npm_url": {
+            "type": "string",
+            "required": true,
+            "default": "http://192.168.0.142:81/api",
+            "label": "NPM API URL"
+        },
+        "identity": {
+            "type": "string",
+            "required": true,
+            "default": "admin@example.com",
+            "label": "NPM Admin Email"
+        },
+        "secret": {
+            "type": "password",
+            "required": true,
+            "label": "NPM Admin Password"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    }
+}
