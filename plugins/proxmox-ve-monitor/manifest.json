@@ -1,7 +1,7 @@
 {
   "id": "proxmox-ve-monitor",
   "name": "Proxmox VE Monitor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "HomePulse Community",
   "min_homepulse_version": "1.0.0",
   "entrypoint": "main.py",

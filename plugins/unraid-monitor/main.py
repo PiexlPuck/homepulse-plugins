@@ -4,6 +4,7 @@ import time
 import logging
 import requests
 import traceback
+from datetime import datetime, timezone
 
 # Setup stdout logger
 logging.basicConfig(
@@ -13,13 +14,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger("unraid-monitor")
 
-# Load environment configuration variables
-UNRAID_URL = os.getenv("UNRAID_URL", "http://192.168.0.220/graphql")
-API_KEY = os.getenv("API_KEY")
-INTERVAL = int(os.getenv("INTERVAL", "30"))
+# Prefixed with PLUGIN_ loaded from environment
+UNRAID_URL = os.getenv("PLUGIN_UNRAID_URL", "http://192.168.0.220/graphql")
+API_KEY = os.getenv("PLUGIN_API_KEY")
+INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
 
-# HomePulse API Gateway parameters
-HOMEPULSE_GATEWAY_URL = os.getenv("HOMEPULSE_GATEWAY_URL", "http://localhost:8000")
+# Core injected variables
+HOMEPULSE_API_URL = os.getenv("HOMEPULSE_API_URL", "http://localhost:8000/api/plugins/gateway")
+PLUGIN_ID = os.getenv("PLUGIN_ID", "unraid-monitor")
 PLUGIN_TOKEN = os.getenv("PLUGIN_TOKEN")
 
 # Headers for Unraid Native GraphQL connection
@@ -35,12 +37,15 @@ GATEWAY_HEADERS = {
 }
 
 
-def send_state_to_gateway(entity_key, value, attributes=None):
+def send_state_to_gateway(entity_key, name, type_val, value, attributes=None):
     """Sends a state configuration update payload to the main HomePulse Gateway."""
-    url = f"{HOMEPULSE_GATEWAY_URL}/api/plugins/gateway/state"
+    url = f"{HOMEPULSE_API_URL.rstrip('/')}/state"
     payload = {
+        "node_id": PLUGIN_ID,
         "entity_key": entity_key,
-        "value": value,
+        "name": name,
+        "type": type_val,
+        "value": str(value),
         "attributes": attributes or {}
     }
     try:
@@ -53,11 +58,12 @@ def send_state_to_gateway(entity_key, value, attributes=None):
 
 def send_log_to_gateway(level, message):
     """Logs trace warning/errors back to central HomePulse logging system."""
-    url = f"{HOMEPULSE_GATEWAY_URL}/api/plugins/gateway/logs"
+    url = f"{HOMEPULSE_API_URL.rstrip('/')}/logs"
     payload = {
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "plugin_id": PLUGIN_ID,
         "level": level.upper(),
-        "message": message
+        "message": message,
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
     try:
         r = requests.post(url, json=payload, headers=GATEWAY_HEADERS, timeout=5)
@@ -65,19 +71,6 @@ def send_log_to_gateway(level, message):
             logger.error(f"Failed to post gateway logs: HTTP {r.status_code} - {r.text}")
     except Exception as e:
         logger.error(f"Error sending log to gateway: {e}")
-
-
-def send_health_status(status, error_message=""):
-    """Reports overall plugin query health back to gateway."""
-    url = f"{HOMEPULSE_GATEWAY_URL}/api/plugins/gateway/state"
-    payload = {
-        "status": status,
-        "error_message": error_message
-    }
-    try:
-        requests.post(url, json=payload, headers=GATEWAY_HEADERS, timeout=5)
-    except Exception as e:
-        logger.error(f"Error sending health status key: {e}")
 
 
 def query_unraid_graphql(query_string):
@@ -149,20 +142,19 @@ def fetch_and_report_metrics():
             version = system.get("version", "Unknown")
             uptime = system.get("uptime", 0)
             
-            # Memory parsing (inputs returned in bytes or kb depending on OS spec)
             mem = system.get("memory", {})
             mem_total = mem.get("total", 0)
             mem_free = mem.get("free", 0)
             mem_used = mem_total - mem_free
             mem_pct = round((mem_used / mem_total) * 100.0, 2) if mem_total > 0 else 0.0
             
-            send_state_to_gateway("unraid-system-status", "ONLINE", {
+            send_state_to_gateway("unraid-system-status", "Unraid System Status", "binary_sensor", "ONLINE", {
                 "hostname": hostname,
                 "version": version,
                 "uptime_seconds": uptime
             })
             
-            send_state_to_gateway("unraid-memory", mem_pct, {
+            send_state_to_gateway("unraid-memory", "Unraid Memory Usage", "sensor", mem_pct, {
                 "used_bytes": mem_used,
                 "total_bytes": mem_total,
                 "unit": "%"
@@ -178,8 +170,8 @@ def fetch_and_report_metrics():
             arr_total = capacity.get("total", 0)
             arr_pct = round((arr_used / arr_total) * 100.0, 2) if arr_total > 0 else 0.0
             
-            send_state_to_gateway("unraid-array-status", state)
-            send_state_to_gateway("unraid-array-capacity", arr_pct, {
+            send_state_to_gateway("unraid-array-status", "Unraid Array Status", "sensor", state)
+            send_state_to_gateway("unraid-array-capacity", "Unraid Array Capacity", "sensor", arr_pct, {
                 "free_bytes": arr_free,
                 "used_bytes": arr_used,
                 "total_bytes": arr_total,
@@ -194,17 +186,23 @@ def fetch_and_report_metrics():
                 disk_status = disk.get("status", "NORMAL").upper()
                 disk_temp = disk.get("temp", 0)
                 
-                send_state_to_gateway(f"unraid-disk-{disk_name}-temp", disk_temp, {
-                    "size": disk_size,
-                    "status": disk_status,
-                    "unit": "°C"
-                })
+                send_state_to_gateway(
+                    f"unraid-disk-{disk_name}-temp",
+                    f"Unraid Disk {disk_name} Temperature",
+                    "sensor",
+                    disk_temp,
+                    {
+                        "size": disk_size,
+                        "status": disk_status,
+                        "unit": "°C"
+                    }
+                )
 
         # 3. Parse Docker Containers
         containers = data.get("dockerContainers", [])
         if containers:
             running_containers = sum(1 for c in containers if c.get("state", "").lower() == "running")
-            send_state_to_gateway("unraid-active-containers", running_containers, {
+            send_state_to_gateway("unraid-active-containers", "Unraid Active Containers", "sensor", running_containers, {
                 "total": len(containers)
             })
 
@@ -212,24 +210,29 @@ def fetch_and_report_metrics():
         vms = data.get("vms", [])
         if vms:
             running_vms = sum(1 for v in vms if v.get("state", "").lower() == "running")
-            send_state_to_gateway("unraid-active-vms", running_vms, {
+            send_state_to_gateway("unraid-active-vms", "Unraid Active VMs", "sensor", running_vms, {
                 "total": len(vms)
             })
 
-        send_health_status("healthy")
+        # Report overall healthy status
+        send_state_to_gateway("status", "Unraid Connection Status", "binary_sensor", "ONLINE")
         logger.info("Successfully fetched and forwarded Unraid metrics.")
 
     except requests.exceptions.RequestException as req_err:
         err_msg = f"Network connection error to Unraid GraphQL API: {req_err}"
         logger.error(err_msg)
         send_log_to_gateway("ERROR", err_msg)
-        send_state_to_gateway("unraid-system-status", "OFFLINE")
-        send_health_status("degraded", err_msg)
+        send_state_to_gateway("unraid-system-status", "Unraid System Status", "binary_sensor", "OFFLINE")
+        send_state_to_gateway("status", "Unraid Connection Status", "binary_sensor", "OFFLINE", {
+            "error_message": err_msg
+        })
     except Exception as e:
         err_msg = f"Unexpected error in Unraid monitoring loop: {e}\n{traceback.format_exc()}"
         logger.error(err_msg)
         send_log_to_gateway("ERROR", err_msg)
-        send_health_status("degraded", f"Unraid monitor error: {e}")
+        send_state_to_gateway("status", "Unraid Connection Status", "binary_sensor", "OFFLINE", {
+            "error_message": f"Plugin error: {e}"
+        })
 
 
 def main():
@@ -237,10 +240,12 @@ def main():
 
     # Simple validations for authorization key existence
     if not API_KEY:
-        msg = "Missing required authentication settings: API_KEY must be configured in environment."
+        msg = "Missing required authentication settings: PLUGIN_API_KEY must be configured in environment."
         logger.error(msg)
         send_log_to_gateway("FATAL", msg)
-        send_health_status("degraded", msg)
+        send_state_to_gateway("status", "Unraid Connection Status", "binary_sensor", "OFFLINE", {
+            "error_message": msg
+        })
         sys.exit(1)
 
     while True:
