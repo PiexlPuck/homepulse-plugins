@@ -1,0 +1,49 @@
+{
+  "id": "proxmox-ve-monitor",
+  "name": "Proxmox VE Monitor",
+  "version": "1.0.0",
+  "author": "HomePulse Community",
+  "min_homepulse_version": "1.0.0",
+  "entrypoint": "main.py",
+  "ui_card": "assets/card.js",
+  "permissions": [
+    "network_outbound",
+    "host_metrics"
+  ],
+  "settings_schema": {
+    "pve_url": {
+      "type": "string",
+      "required": true,
+      "default": "https://192.168.0.142:8006/api2/json/",
+      "label": "Proxmox VE API URL"
+    },
+    "pve_user": {
+      "type": "string",
+      "required": true,
+      "default": "root@pam",
+      "label": "PVE Username"
+    },
+    "pve_token_id": {
+      "type": "string",
+      "required": true,
+      "label": "API Token ID (username@realm!tokenid)"
+    },
+    "pve_token_secret": {
+      "type": "password",
+      "required": true,
+      "label": "API Token Secret"
+    },
+    "pve_node": {
+      "type": "string",
+      "required": true,
+      "default": "pve",
+      "label": "PVE Node Name"
+    },
+    "interval": {
+      "type": "integer",
+      "required": false,
+      "default": 30,
+      "label": "Sync Interval (s)"
+    }
+  }
+}
