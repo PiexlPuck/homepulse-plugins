@@ -2,3 +2,7 @@
 /api_documentation/
 /brainstorm/
 /Plugin Architecture Design.md
+
+# Python cache files
+__pycache__/
+*.pyc
