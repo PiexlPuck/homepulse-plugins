@@ -1,0 +1,43 @@
+{
+    "id": "proxmox-backup-monitor",
+    "name": "Proxmox Backup Monitor",
+    "version": "1.1.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "pbs_url": {
+            "type": "string",
+            "required": true,
+            "default": "https://192.168.0.142:8007/api2/json/",
+            "label": "Proxmox Backup Server URL"
+        },
+        "pbs_node": {
+            "type": "string",
+            "required": true,
+            "default": "localhost",
+            "label": "PBS Node Name"
+        },
+        "pbs_token_id": {
+            "type": "string",
+            "required": true,
+            "label": "API Token ID (username@realm!tokenid)"
+        },
+        "pbs_token_secret": {
+            "type": "password",
+            "required": true,
+            "label": "API Token Secret"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    }
+}
