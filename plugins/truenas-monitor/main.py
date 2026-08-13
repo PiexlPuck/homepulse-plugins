@@ -1,0 +1,230 @@
+import os
+import sys
+import time
+import logging
+import requests
+import traceback
+from datetime import datetime, timezone
+
+# Setup basic stdout logger
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
+logger = logging.getLogger("truenas-monitor")
+
+# Prefixed with PLUGIN_ loaded from environment
+TRUENAS_URL = os.getenv("PLUGIN_TRUENAS_URL", "http://192.168.0.100/api/v2.0/")
+API_KEY = os.getenv("PLUGIN_API_KEY")
+INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
+
+# Core injected variables
+HOMEPULSE_API_URL = os.getenv("HOMEPULSE_API_URL", "http://localhost:8000/api/plugins/gateway")
+PLUGIN_ID = os.getenv("PLUGIN_ID", "truenas-monitor")
+PLUGIN_TOKEN = os.getenv("PLUGIN_TOKEN")
+
+# Headers for TrueNAS Middleware API REST token auth connection
+TRUENAS_HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Accept": "application/json"
+}
+
+# Headers for HomePulse API Gateway connection
+GATEWAY_HEADERS = {
+    "Authorization": f"Bearer {PLUGIN_TOKEN}",
+    "Content-Type": "application/json"
+}
+
+
+def send_state_to_gateway(entity_key, name, type_val, value, attributes=None):
+    """Sends a state configuration update payload to the main HomePulse Gateway."""
+    url = f"{HOMEPULSE_API_URL.rstrip('/')}/state"
+    payload = {
+        "node_id": PLUGIN_ID,
+        "entity_key": entity_key,
+        "name": name,
+        "type": type_val,
+        "value": str(value),
+        "attributes": attributes or {}
+    }
+    try:
+        r = requests.post(url, json=payload, headers=GATEWAY_HEADERS, timeout=5)
+        if r.status_code != 200:
+            logger.error(f"Failed to push state for {entity_key}: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        logger.error(f"Error sending telemetry state of {entity_key} to gateway: {e}")
+
+
+def send_log_to_gateway(level, message):
+    """Logs trace warning/errors back to central HomePulse logging system."""
+    url = f"{HOMEPULSE_API_URL.rstrip('/')}/logs"
+    payload = {
+        "plugin_id": PLUGIN_ID,
+        "level": level.upper(),
+        "message": message,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    try:
+        r = requests.post(url, json=payload, headers=GATEWAY_HEADERS, timeout=5)
+        if r.status_code != 200:
+            logger.error(f"Failed to post gateway logs: HTTP {r.status_code} - {r.text}")
+    except Exception as e:
+        logger.error(f"Error sending log to gateway: {e}")
+
+
+def query_truenas_endpoint(endpoint_path):
+    """Queries the TrueNAS REST API endpoint using Authorization token."""
+    url = f"{TRUENAS_URL.rstrip('/')}/{endpoint_path.lstrip('/')}"
+    r = requests.get(url, headers=TRUENAS_HEADERS, verify=False, timeout=10)
+    r.raise_for_status()
+    return r.json()
+
+
+def fetch_and_report_metrics():
+    """Polls TrueNAS REST API pathways and forwards telemetry states back."""
+    try:
+        logger.info(f"Querying TrueNAS resources from API: {TRUENAS_URL}")
+        
+        # 1. Fetch System Info properties
+        sys_info = query_truenas_endpoint("system/info")
+        version = sys_info.get("version", "Unknown")
+        hostname = sys_info.get("hostname", "truenas")
+        uptime = sys_info.get("uptime_seconds", 0)
+        physmem = sys_info.get("physmem", 0)
+        
+        send_state_to_gateway("truenas-system-status", "TrueNAS System Status", "binary_sensor", "ONLINE", {
+            "version": version,
+            "hostname": hostname,
+            "uptime_seconds": uptime,
+            "physmem_bytes": physmem
+        })
+
+        # 2. Fetch Active System Warnings / Alerts
+        try:
+            alerts = query_truenas_endpoint("alert/list")
+            top_alerts = []
+            for alert in alerts[:5]:
+                top_alerts.append({
+                    "id": alert.get("id"),
+                    "level": alert.get("level", "WARNING"),
+                    "message": alert.get("formatted", ""),
+                    "datetime": alert.get("datetime")
+                })
+            send_state_to_gateway("truenas-alerts-count", "TrueNAS Active Alerts", "sensor", len(alerts), {
+                "active_alerts": top_alerts
+            })
+        except Exception as alert_err:
+            logger.warning(f"Failed to query alerts: {alert_err}")
+            send_log_to_gateway("WARNING", f"Failed to query alerts: {alert_err}")
+
+        # 3. Fetch Storage Pools (ZFS status)
+        try:
+            pools = query_truenas_endpoint("pool")
+            pool_list = []
+            for pool in pools:
+                name = pool.get("name", "unknown")
+                status = pool.get("status", "UNKNOWN").upper()
+                healthy = pool.get("healthy", False)
+                state = "ONLINE" if healthy else "OFFLINE"
+                
+                send_state_to_gateway(
+                    f"truenas-pool-{name}-healthy",
+                    f"TrueNAS Pool {name} Health",
+                    "binary_sensor",
+                    state,
+                    {"status": status}
+                )
+                pool_list.append({
+                    "name": name,
+                    "status": status,
+                    "healthy": healthy
+                })
+            send_state_to_gateway("truenas-pools-summary", "TrueNAS Pools Summary", "sensor", len(pools), {
+                "pools": pool_list
+            })
+        except Exception as pool_err:
+            logger.warning(f"Failed to query storage pools: {pool_err}")
+            send_log_to_gateway("WARNING", f"Failed to query storage pools: {pool_err}")
+
+        # 4. Fetch Drives Inventory
+        try:
+            disks = query_truenas_endpoint("disk")
+            disk_list = []
+            for disk in disks:
+                name = disk.get("name")
+                if not name:
+                    continue
+                serial = disk.get("serial", "unknown")
+                size = disk.get("size", 0)
+                dtype = disk.get("type", "HDD")
+                smart_ok = disk.get("smart_enabled", True)
+                state = "ONLINE" if smart_ok else "OFFLINE"
+                
+                send_state_to_gateway(
+                    f"truenas-disk-{name}-status",
+                    f"TrueNAS Disk {name} Status",
+                    "binary_sensor",
+                    state,
+                    {
+                        "serial": serial,
+                        "size_bytes": size,
+                        "type": dtype
+                    }
+                )
+                disk_list.append({
+                    "name": name,
+                    "serial": serial,
+                    "size_bytes": size,
+                    "type": dtype,
+                    "smart_enabled": smart_ok
+                })
+            send_state_to_gateway("truenas-disks-count", "TrueNAS Disks Count", "sensor", len(disk_list))
+        except Exception as disk_err:
+            logger.warning(f"Failed to query disk list: {disk_err}")
+            send_log_to_gateway("WARNING", f"Failed to query disk list: {disk_err}")
+
+        # Report overall healthy status
+        send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "ONLINE")
+        logger.info("Successfully fetched and forwarded all TrueNAS monitoring metrics.")
+
+    except requests.exceptions.RequestException as req_err:
+        err_msg = f"Network connection error to TrueNAS REST API endpoint: {req_err}"
+        logger.error(err_msg)
+        send_log_to_gateway("ERROR", err_msg)
+        send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "OFFLINE", {
+            "error_message": err_msg
+        })
+    except Exception as e:
+        err_msg = f"Unhandled error in TrueNAS monitoring loop: {e}\n{traceback.format_exc()}"
+        logger.error(err_msg)
+        send_log_to_gateway("ERROR", err_msg)
+        send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "OFFLINE", {
+            "error_message": f"Plugin error: {e}"
+        })
+
+
+def main():
+    logger.info("Initializing TrueNAS REST Monitor loop...")
+    
+    if not API_KEY:
+        msg = "Missing required authentication settings: PLUGIN_API_KEY must be defined."
+        logger.error(msg)
+        send_log_to_gateway("FATAL", msg)
+        send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "OFFLINE", {
+            "error_message": msg
+        })
+        sys.exit(1)
+
+    # Disable SSL Warnings for self-signed certificates
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+    while True:
+        fetch_and_report_metrics()
+        logger.info(f"Sleeping for {INTERVAL} seconds...")
+        time.sleep(INTERVAL)
+
+
+if __name__ == "__main__":
+    main()

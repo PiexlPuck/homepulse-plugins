@@ -1,0 +1,32 @@
+{
+    "id": "truenas-monitor",
+    "name": "TrueNAS Monitor",
+    "version": "1.1.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "truenas_url": {
+            "type": "string",
+            "required": true,
+            "default": "http://192.168.0.100/api/v2.0/",
+            "label": "TrueNAS REST API URL"
+        },
+        "api_key": {
+            "type": "password",
+            "required": true,
+            "label": "TrueNAS API Key"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    }
+}
