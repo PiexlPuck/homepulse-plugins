@@ -1,0 +1,32 @@
+{
+    "id": "unraid-monitor",
+    "name": "Unraid Monitor",
+    "version": "1.0.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "unraid_url": {
+            "type": "string",
+            "required": true,
+            "default": "http://192.168.0.220/graphql",
+            "label": "Unraid GraphQL API URL"
+        },
+        "api_key": {
+            "type": "password",
+            "required": true,
+            "label": "Unraid API Key"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    }
+}
