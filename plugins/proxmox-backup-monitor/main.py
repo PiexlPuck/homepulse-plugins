@@ -27,9 +27,9 @@ PLUGIN_ID = os.getenv("PLUGIN_ID", "proxmox-backup-monitor")
 PLUGIN_TOKEN = os.getenv("PLUGIN_TOKEN")
 
 # Headers for Proxmox Backup Server API connection (API Token Auth)
-# Header Format: Authorization: PBSAPIToken=username@realm!tokenid=tokensecret
+# Header Format: Authorization: PBSAPIToken=username@realm!tokenid:tokensecret
 PBS_HEADERS = {
-    "Authorization": f"PBSAPIToken={PBS_TOKEN_ID}={PBS_TOKEN_SECRET}",
+    "Authorization": f"PBSAPIToken={PBS_TOKEN_ID}:{PBS_TOKEN_SECRET}",
     "Accept": "application/json"
 }
 
