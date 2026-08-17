@@ -203,6 +203,125 @@ def fetch_and_report_metrics():
             "datastores": datastore_list
         })
 
+        # 3. Query Disks List
+        try:
+            logger.info("Querying host disk list status...")
+            disks_list = query_pbs_endpoint(f"nodes/{PBS_NODE}/disks/list")
+            if isinstance(disks_list, list):
+                send_state_to_gateway("pbs-disks-summary", "PBS Disks Summary", "sensor", len(disks_list), {
+                    "disks": disks_list
+                })
+                for disk in disks_list:
+                    d_name = disk.get("name", "unknown")
+                    d_model = disk.get("model", "Unknown")
+                    d_size = disk.get("size", 0)
+                    d_type = disk.get("disk-type", "unknown")
+                    d_status = disk.get("status", "unknown")
+                    d_wearout = disk.get("wearout")
+                    
+                    state_val = "ONLINE" if str(d_status).lower() == "passed" else "OFFLINE"
+                    send_state_to_gateway(
+                        f"pbs-disk-{d_name}",
+                        f"PBS Disk {d_name}",
+                        "binary_sensor",
+                        state_val,
+                        {
+                            "model": d_model,
+                            "size_bytes": d_size,
+                            "disk_type": d_type,
+                            "wearout_percent": d_wearout if d_wearout is not None else "N/A",
+                            "status": d_status
+                        }
+                    )
+        except Exception as disk_err:
+            logger.warning(f"Failed to query disks list: {disk_err}")
+            send_log_to_gateway("WARNING", f"Failed to query host disks list: {disk_err}")
+
+        # 4. Query Tasks
+        try:
+            logger.info("Querying system task history...")
+            tasks_list = query_pbs_endpoint(f"nodes/{PBS_NODE}/tasks")
+            if isinstance(tasks_list, list):
+                active_tasks = [t for t in tasks_list if t.get("endtime") is None]
+                send_state_to_gateway("pbs-active-tasks-count", "PBS Active Tasks Count", "sensor", len(active_tasks), {
+                    "active_tasks": active_tasks[:10]
+                })
+                
+                sorted_tasks = sorted(tasks_list, key=lambda x: x.get("starttime", 0), reverse=True)
+                backup_tasks = [t for t in sorted_tasks if t.get("worker_type") == "backup"]
+                
+                if backup_tasks:
+                    last_backup = backup_tasks[0]
+                    lb_status = last_backup.get("status")
+                    lb_endtime = last_backup.get("endtime")
+                    
+                    if lb_endtime is None:
+                        backup_val = "RUNNING"
+                    elif lb_status == "OK":
+                        backup_val = "OK"
+                    else:
+                        backup_val = f"ERROR ({lb_status or 'Unknown'})"
+                        
+                    send_state_to_gateway("pbs-last-backup-status", "PBS Last Backup Status", "sensor", backup_val, {
+                        "upid": last_backup.get("upid"),
+                        "worker_id": last_backup.get("worker_id"),
+                        "starttime": datetime.fromtimestamp(last_backup.get("starttime", 0), timezone.utc).isoformat() if last_backup.get("starttime") else "N/A",
+                        "endtime": datetime.fromtimestamp(lb_endtime, timezone.utc).isoformat() if lb_endtime else "N/A"
+                    })
+                else:
+                    send_state_to_gateway("pbs-last-backup-status", "PBS Last Backup Status", "sensor", "UNKNOWN", {
+                        "message": "No backup tasks found in history."
+                    })
+        except Exception as task_err:
+            logger.warning(f"Failed to query tasks list: {task_err}")
+            send_log_to_gateway("WARNING", f"Failed to query host task history: {task_err}")
+
+        # 5. Query Services
+        try:
+            logger.info("Querying core backup service states...")
+            services_list = query_pbs_endpoint(f"nodes/{PBS_NODE}/services")
+            if isinstance(services_list, list):
+                for sname in ["proxmox-backup", "proxmox-backup-proxy"]:
+                    match_service = next((s for s in services_list if s.get("service") == sname), None)
+                    if match_service:
+                        state_val = "ONLINE" if match_service.get("state") == "running" else "OFFLINE"
+                        send_state_to_gateway(
+                            f"pbs-service-{sname}",
+                            f"PBS Service {match_service.get('desc', sname)}",
+                            "binary_sensor",
+                            state_val,
+                            {
+                                "unit-state": match_service.get("unit-state", "unknown"),
+                                "state": match_service.get("state", "unknown")
+                            }
+                        )
+        except Exception as serv_err:
+            logger.warning(f"Failed to query services list: {serv_err}")
+            send_log_to_gateway("WARNING", f"Failed to query host services: {serv_err}")
+
+        # 6. Query Subscription Status
+        try:
+            logger.info("Querying system support subscription key status...")
+            sub = query_pbs_endpoint(f"nodes/{PBS_NODE}/subscription")
+            sub_status = sub.get("status", "UNKNOWN").upper()
+            send_state_to_gateway("pbs-subscription-status", "PBS Subscription Status", "sensor", sub_status, {
+                "message": sub.get("message", "N/A"),
+                "serverid": sub.get("serverid", "N/A")
+            })
+        except Exception as sub_err:
+            logger.warning(f"Failed to query subscription: {sub_err}")
+
+        # 7. Query Sync Configuration List
+        try:
+            logger.info("Querying remote sync job configuration rules...")
+            syncs = query_pbs_endpoint("config/sync")
+            if isinstance(syncs, list):
+                send_state_to_gateway("pbs-sync-jobs-count", "PBS Sync Jobs Count", "sensor", len(syncs), {
+                    "sync_jobs": syncs
+                })
+        except Exception as sync_err:
+            logger.warning(f"Failed to query sync configurations: {sync_err}")
+
         # Report overall healthy status
         send_state_to_gateway("status", "PBS Connection Status", "binary_sensor", "ONLINE")
         logger.info("Successfully fetched and forwarded all Proxmox Backup Server metrics.")

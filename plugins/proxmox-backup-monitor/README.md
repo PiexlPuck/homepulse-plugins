@@ -1,6 +1,6 @@
 # Proxmox Backup Server (PBS) Monitor Plugin Setup Guide
 
-This plugin monitors physical host metrics (CPU, Memory, Swap, Uptime), datastore sizes, and Garbage Collection (GC) status on a Proxmox Backup Server.
+This plugin monitors physical host metrics (CPU, Memory, Swap, Uptime), datastore sizes, Garbage Collection (GC) status, physical disks (wearout & health status), recent task logs (active counts & last backup status), core daemon service status, remote sync replication configs, and subscription keys.
 
 ## 1. Create API Token in Proxmox Backup Server
 1. Log in to your Proxmox Backup Server Web GUI on port `8007`.
