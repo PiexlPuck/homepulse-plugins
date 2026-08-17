@@ -145,7 +145,7 @@ def fetch_and_report_metrics():
             gc_status_val = "UNKNOWN"
             gc_attribs = {}
             try:
-                gc_data = query_pbs_endpoint(f"admin/datastore/{store}/gc-status")
+                gc_data = query_pbs_endpoint(f"admin/datastore/{store}/gc")
                 last_run_state = gc_data.get("last-run-state")
                 if last_run_state:
                     gc_status_val = "OK" if last_run_state.upper() == "OK" else "FAILED"
@@ -154,7 +154,9 @@ def fetch_and_report_metrics():
                     "last_run_state": last_run_state or "Never Run",
                     "removed_bytes": gc_data.get("removed-bytes", 0),
                     "still_anchor": gc_data.get("still-anchor", 0),
-                    "removed_chunks": gc_data.get("removed-chunks", 0)
+                    "removed_chunks": gc_data.get("removed-chunks", 0),
+                    "pending_bytes": gc_data.get("pending-bytes", 0),
+                    "disk_bytes": gc_data.get("disk-bytes", 0)
                 }
             except Exception as gc_err:
                 logger.warning(f"Failed to query GC status for datastore {store}: {gc_err}")
