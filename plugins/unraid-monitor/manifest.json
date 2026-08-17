@@ -1,7 +1,7 @@
 {
     "id": "unraid-monitor",
     "name": "Unraid Monitor",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
