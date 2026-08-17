@@ -1,6 +1,6 @@
 # Unraid OS Monitor Plugin Setup Guide
 
-This plugin monitors array status, disk temperatures, and virtualization counts (Docker/VMs) on Unraid servers.
+This plugin monitors array status, disk temperatures, Docker container lists (including autostart configuration), VM lists (including autostart configurations), shares count, CPU load details, and virtualization counts on Unraid servers.
 
 ## 1. Local GraphQL API Access
 Unraid systems typically require a GraphQL backend API server configuration (such as Dynamix or standard Docker API setups) handling system queries:

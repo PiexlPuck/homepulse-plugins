@@ -184,6 +184,72 @@ def fetch_and_report_metrics():
             logger.warning(f"Failed to query disk list: {disk_err}")
             send_log_to_gateway("WARNING", f"Failed to query disk list: {disk_err}")
 
+        # 5. Fetch Services Status
+        try:
+            logger.info("Querying system services status...")
+            services = query_truenas_endpoint("service")
+            if isinstance(services, list):
+                for sname in ["smb", "nfs", "ssh", "iscsitarget", "webdav", "smartd"]:
+                    match_srv = next((s for s in services if s.get("service") == sname), None)
+                    if match_srv:
+                        state = "ONLINE" if match_srv.get("state") == "RUNNING" else "OFFLINE"
+                        send_state_to_gateway(
+                            f"truenas-service-{sname}",
+                            f"TrueNAS Service {sname.upper()}",
+                            "binary_sensor",
+                            state,
+                            {
+                                "state": match_srv.get("state", "UNKNOWN"),
+                                "enable": match_srv.get("enable", False)
+                            }
+                        )
+        except Exception as srv_err:
+            logger.warning(f"Failed to query TrueNAS services: {srv_err}")
+
+        # 6. Fetch Virtual Machines (VMs)
+        try:
+            logger.info("Querying virtual machines...")
+            vms_list = query_truenas_endpoint("vm")
+            if isinstance(vms_list, list):
+                active_vms = sum(1 for v in vms_list if v.get("status", {}).get("state") == "RUNNING")
+                send_state_to_gateway("truenas-vms-count", "TrueNAS VMs Count", "sensor", len(vms_list))
+                send_state_to_gateway("truenas-vms-active", "TrueNAS Active VMs", "sensor", active_vms, {
+                    "vms": [
+                        {
+                            "name": v.get("name"),
+                            "state": v.get("status", {}).get("state"),
+                            "cores": v.get("vcpus"),
+                            "memory": v.get("memory")
+                        } for v in vms_list
+                    ]
+                })
+        except Exception as vm_err:
+            logger.warning(f"Failed to query TrueNAS VMs: {vm_err}")
+
+        # 7. Fetch Network Interfaces
+        try:
+            logger.info("Querying network interfaces...")
+            interfaces = query_truenas_endpoint("interface")
+            if isinstance(interfaces, list):
+                for iface in interfaces:
+                    name = iface.get("name", "unknown")
+                    state = "ONLINE" if iface.get("state", {}).get("link_state") == "LINK_STATE_UP" else "OFFLINE"
+                    aliases = [a.get("address") for a in iface.get("state", {}).get("aliases", []) if a.get("address")]
+                    
+                    send_state_to_gateway(
+                        f"truenas-interface-{name}",
+                        f"TrueNAS Interface {name}",
+                        "binary_sensor",
+                        state,
+                        {
+                            "link_state": iface.get("state", {}).get("link_state", "UNKNOWN"),
+                            "speed": iface.get("state", {}).get("active_media_speed", "unknown"),
+                            "ip_addresses": aliases
+                        }
+                    )
+        except Exception as if_err:
+            logger.warning(f"Failed to query TrueNAS interfaces: {if_err}")
+
         # Report overall healthy status
         send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "ONLINE")
         logger.info("Successfully fetched and forwarded all TrueNAS monitoring metrics.")

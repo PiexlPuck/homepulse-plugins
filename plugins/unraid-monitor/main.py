@@ -124,11 +124,13 @@ def fetch_and_report_metrics():
             names
             state
             status
+            autoStart
           }
           vms {
             id
             name
             state
+            autoStart
           }
         }
         """
@@ -151,7 +153,9 @@ def fetch_and_report_metrics():
             send_state_to_gateway("unraid-system-status", "Unraid System Status", "binary_sensor", "ONLINE", {
                 "hostname": hostname,
                 "version": version,
-                "uptime_seconds": uptime
+                "uptime_seconds": uptime,
+                "cpu_cores": system.get("cpu", {}).get("cores", 1),
+                "cpu_model": system.get("cpu", {}).get("model", "Unknown")
             })
             
             send_state_to_gateway("unraid-memory", "Unraid Memory Usage", "sensor", mem_pct, {
@@ -202,17 +206,52 @@ def fetch_and_report_metrics():
         containers = data.get("dockerContainers", [])
         if containers:
             running_containers = sum(1 for c in containers if c.get("state", "").lower() == "running")
+            container_list = [
+                {
+                    "names": c.get("names", []),
+                    "state": c.get("state"),
+                    "status": c.get("status"),
+                    "auto_start": c.get("autoStart", False)
+                } for c in containers
+            ]
             send_state_to_gateway("unraid-active-containers", "Unraid Active Containers", "sensor", running_containers, {
-                "total": len(containers)
+                "total": len(containers),
+                "containers": container_list
             })
 
         # 4. Parse Virtual Machines (VMs)
         vms = data.get("vms", [])
         if vms:
             running_vms = sum(1 for v in vms if v.get("state", "").lower() == "running")
+            vm_list = [
+                {
+                    "name": v.get("name"),
+                    "state": v.get("state"),
+                    "auto_start": v.get("autoStart", False)
+                } for v in vms
+            ]
             send_state_to_gateway("unraid-active-vms", "Unraid Active VMs", "sensor", running_vms, {
-                "total": len(vms)
+                "total": len(vms),
+                "vms": vm_list
             })
+
+        # 5. Optional Share List Query (GraphQL defensive fetch)
+        try:
+            shares_query = """
+            query {
+              shares {
+                name
+              }
+            }
+            """
+            shares_data = query_unraid_graphql(shares_query)
+            shares_list = shares_data.get("shares", [])
+            if isinstance(shares_list, list):
+                send_state_to_gateway("unraid-shares-count", "Unraid Shares Count", "sensor", len(shares_list), {
+                    "shares": [s.get("name") for s in shares_list if s.get("name")]
+                })
+        except Exception as share_err:
+            logger.debug(f"Optional Unraid shares query ignored/unsupported: {share_err}")
 
         # Report overall healthy status
         send_state_to_gateway("status", "Unraid Connection Status", "binary_sensor", "ONLINE")

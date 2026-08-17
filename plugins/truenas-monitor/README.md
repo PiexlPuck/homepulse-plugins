@@ -1,6 +1,6 @@
 # TrueNAS Monitor Plugin Setup Guide
 
-This plugin monitors server specs, active alerts, drive statuses, and ZFS pool health on TrueNAS systems. It is compatible with both **TrueNAS Core** (FreeBSD-based) and **TrueNAS SCALE** (Linux-based) REST API v2.0 interfaces.
+This plugin monitors server specs, active alerts, drive statuses, ZFS pool health, system services running state, VM counts, and network interfaces on TrueNAS systems. It is compatible with both **TrueNAS Core** (FreeBSD-based) and **TrueNAS SCALE** (Linux-based) REST API v2.0 interfaces.
 
 ## 1. Retrieve API Key inside TrueNAS Web UI
 You must generate a bearer API Token inside the Web UI:
