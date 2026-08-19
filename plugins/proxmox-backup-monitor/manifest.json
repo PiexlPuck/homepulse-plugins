@@ -1,7 +1,7 @@
 {
     "id": "proxmox-backup-monitor",
     "name": "Proxmox Backup Monitor",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
@@ -45,6 +45,65 @@
             "required": false,
             "default": 30,
             "label": "Sync Interval (s)"
+        }
+    },
+    "entities": {
+        "pbs-datastores-summary": {
+            "name": "PBS Datastores Summary",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "store",
+                    "total",
+                    "used",
+                    "avail",
+                    "capacity_pct",
+                    "gc_status"
+                ]
+            }
+        },
+        "pbs-disks-summary": {
+            "name": "PBS Disks Summary",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "name",
+                    "model",
+                    "size",
+                    "disk-type",
+                    "status",
+                    "wearout"
+                ]
+            }
+        },
+        "pbs-active-tasks-count": {
+            "name": "PBS Active Tasks Count",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "upid",
+                    "worker_type",
+                    "status",
+                    "starttime"
+                ]
+            }
+        },
+        "pbs-sync-jobs-count": {
+            "name": "PBS Sync Jobs Count",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "id",
+                    "store",
+                    "remote",
+                    "remote-store",
+                    "schedule"
+                ]
+            }
         }
     }
 }

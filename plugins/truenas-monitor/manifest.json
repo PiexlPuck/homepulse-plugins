@@ -1,7 +1,7 @@
 {
     "id": "truenas-monitor",
     "name": "TrueNAS Monitor",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
@@ -27,6 +27,46 @@
             "required": false,
             "default": 30,
             "label": "Sync Interval (s)"
+        }
+    },
+    "entities": {
+        "truenas-pools-summary": {
+            "name": "TrueNAS Pools Summary",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "name",
+                    "status",
+                    "healthy"
+                ]
+            }
+        },
+        "truenas-vms-active": {
+            "name": "TrueNAS VMs Summary",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "name",
+                    "state",
+                    "cores",
+                    "memory"
+                ]
+            }
+        },
+        "truenas-alerts-count": {
+            "name": "TrueNAS Active Alerts",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "id",
+                    "level",
+                    "message",
+                    "datetime"
+                ]
+            }
         }
     }
 }
