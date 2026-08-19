@@ -4,6 +4,9 @@ import time
 import logging
 import requests
 import traceback
+import ssl
+import json
+import websocket
 from datetime import datetime, timezone
 
 # Setup basic stdout logger
@@ -24,17 +27,25 @@ HOMEPULSE_API_URL = os.getenv("HOMEPULSE_API_URL", "http://localhost:8000/api/pl
 PLUGIN_ID = os.getenv("PLUGIN_ID", "truenas-monitor")
 PLUGIN_TOKEN = os.getenv("PLUGIN_TOKEN")
 
-# Headers for TrueNAS Middleware API REST token auth connection
-TRUENAS_HEADERS = {
-    "Authorization": f"Bearer {API_KEY}",
-    "Accept": "application/json"
-}
-
 # Headers for HomePulse API Gateway connection
 GATEWAY_HEADERS = {
     "Authorization": f"Bearer {PLUGIN_TOKEN}",
     "Content-Type": "application/json"
 }
+
+# Mapping legacy endpoint paths to WebSocket methods
+ENDPOINT_METHOD_MAP = {
+    "system/info": "system.info",
+    "alert/list": "alert.list",
+    "pool": "pool.query",
+    "disk": "disk.query",
+    "service": "service.query",
+    "vm": "vm.query",
+    "interface": "interface.query"
+}
+
+# Global active client variable
+ws_client = None
 
 
 def send_state_to_gateway(entity_key, name, type_val, value, attributes=None):
@@ -73,18 +84,78 @@ def send_log_to_gateway(level, message):
         logger.error(f"Error sending log to gateway: {e}")
 
 
+class TrueNASWSClient:
+    def __init__(self, url, api_key):
+        self.url = url
+        self.api_key = api_key
+        self.ws = None
+        self.request_id = 0
+
+    def connect(self):
+        from urllib.parse import urlparse
+        parsed = urlparse(self.url)
+        scheme = "wss" if parsed.scheme == "https" else "ws"
+        netloc = parsed.netloc or parsed.path.split("/")[0]
+        # Build clean ws/wss endpoint pointing to TrueNAS websocket middleware
+        ws_endpoint = f"{scheme}://{netloc}/websocket"
+        
+        logger.info(f"Connecting to TrueNAS WebSocket: {ws_endpoint}")
+        self.ws = websocket.create_connection(
+            ws_endpoint,
+            sslopt={"cert_reqs": ssl.CERT_NONE},
+            timeout=10
+        )
+        
+        # Initiate connection DDP handshake
+        self.ws.send(json.dumps({"msg": "connect", "version": "1", "support": ["1"]}))
+        resp = json.loads(self.ws.recv())
+        if resp.get("msg") != "connected":
+            raise Exception(f"WebSocket handshake failed, received: {resp}")
+            
+        # Authenticate with API key
+        self.call("auth.login_with_api_key", [self.api_key])
+
+    def call(self, method, params=None):
+        self.request_id += 1
+        req_id = str(self.request_id)
+        payload = {
+            "id": req_id,
+            "msg": "method",
+            "method": method,
+            "params": params or []
+        }
+        self.ws.send(json.dumps(payload))
+        
+        while True:
+            resp_str = self.ws.recv()
+            resp = json.loads(resp_str)
+            if resp.get("id") == req_id:
+                if "error" in resp:
+                    raise Exception(f"API Error calling {method}: {resp['error']}")
+                return resp.get("result")
+
+    def close(self):
+        if self.ws:
+            try:
+                self.ws.close()
+            except Exception:
+                pass
+
+
 def query_truenas_endpoint(endpoint_path):
-    """Queries the TrueNAS REST API endpoint using Authorization token."""
-    url = f"{TRUENAS_URL.rstrip('/')}/{endpoint_path.lstrip('/')}"
-    r = requests.get(url, headers=TRUENAS_HEADERS, verify=False, timeout=10)
-    r.raise_for_status()
-    return r.json()
+    """Queries the TrueNAS WebSocket client using the legacy endpoint paths map."""
+    global ws_client
+    method = ENDPOINT_METHOD_MAP.get(endpoint_path, endpoint_path.replace("/", "."))
+    return ws_client.call(method)
 
 
 def fetch_and_report_metrics():
-    """Polls TrueNAS REST API pathways and forwards telemetry states back."""
+    """Polls TrueNAS API pathways over WebSockets and forwards telemetry states back."""
+    global ws_client
     try:
-        logger.info(f"Querying TrueNAS resources from API: {TRUENAS_URL}")
+        logger.info(f"Querying TrueNAS resources from API URL: {TRUENAS_URL}")
+        ws_client = TrueNASWSClient(TRUENAS_URL, API_KEY)
+        ws_client.connect()
         
         # 1. Fetch System Info properties
         sys_info = query_truenas_endpoint("system/info")
@@ -254,24 +325,21 @@ def fetch_and_report_metrics():
         send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "ONLINE")
         logger.info("Successfully fetched and forwarded all TrueNAS monitoring metrics.")
 
-    except requests.exceptions.RequestException as req_err:
-        err_msg = f"Network connection error to TrueNAS REST API endpoint: {req_err}"
-        logger.error(err_msg)
-        send_log_to_gateway("ERROR", err_msg)
-        send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "OFFLINE", {
-            "error_message": err_msg
-        })
     except Exception as e:
-        err_msg = f"Unhandled error in TrueNAS monitoring loop: {e}\n{traceback.format_exc()}"
-        logger.error(err_msg)
+        err_msg = f"Error in TrueNAS monitoring loop: {e}"
+        logger.error(f"{err_msg}\n{traceback.format_exc()}")
         send_log_to_gateway("ERROR", err_msg)
         send_state_to_gateway("status", "TrueNAS Connection Status", "binary_sensor", "OFFLINE", {
-            "error_message": f"Plugin error: {e}"
+            "error_message": str(e)
         })
+    finally:
+        if ws_client:
+            ws_client.close()
+            ws_client = None
 
 
 def main():
-    logger.info("Initializing TrueNAS REST Monitor loop...")
+    logger.info("Initializing TrueNAS WebSocket Monitor loop...")
     
     if not API_KEY:
         msg = "Missing required authentication settings: PLUGIN_API_KEY must be defined."
