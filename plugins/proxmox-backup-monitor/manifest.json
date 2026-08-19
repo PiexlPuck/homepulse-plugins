@@ -1,7 +1,7 @@
 {
     "id": "proxmox-backup-monitor",
     "name": "Proxmox Backup Monitor",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
@@ -23,10 +23,17 @@
             "default": "localhost",
             "label": "PBS Node Name"
         },
-        "pbs_token_id": {
+        "pbs_user": {
             "type": "string",
             "required": true,
-            "label": "API Token ID (username@realm!tokenid)"
+            "default": "root@pam",
+            "label": "PBS Username"
+        },
+        "pbs_token_name": {
+            "type": "string",
+            "required": true,
+            "default": "HomePulse",
+            "label": "PBS API Token Name"
         },
         "pbs_token_secret": {
             "type": "password",

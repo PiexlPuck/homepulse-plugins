@@ -25,6 +25,7 @@ If you checked *Privilege Separation*, or if the user account requires role assi
 Specify these fields in the HomePulse Dashboard configuration UI:
 - **PVE API URL**: E.g. `https://192.168.0.100:8006/api2/json/`
 - **PVE Node Name**: Name of the target PVE host node (default: `pve`).
-- **PVE API Token ID**: Formatted as `username@realm!tokenid` (e.g. `root@pam!HomePulse`).
+- **PVE Username**: E.g. `root@pam` or dedicated local user account.
+- **PVE API Token Name**: E.g. `HomePulse` (defaults to `HomePulse`).
 - **PVE API Token Secret**: The secret key you copied.
 - **Sync Interval (s)**: Metric polling timer in seconds (default: `30`s).

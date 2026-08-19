@@ -24,7 +24,8 @@ For security, PBS tokens do not inherit any permissions by default. You must exp
 Specify these fields in the HomePulse Dashboard configuration UI:
 - **Proxmox Backup Server URL**: E.g. `https://192.168.15.100:8007/api2/json/`
 - **PBS Node Name**: Hostname of the target PBS node (default: `localhost`).
-- **API Token ID**: Formatted as `username@realm!tokenid` (e.g. `root@pam!HomePulse`).
+- **PBS Username**: E.g. `root@pam` (defaults to `root@pam`).
+- **PBS API Token Name**: E.g. `HomePulse` (defaults to `HomePulse`).
 - **API Token Secret**: The secret key you copied.
 - **Sync Interval (s)**: Metric polling timer in seconds (default: `30`s).
 

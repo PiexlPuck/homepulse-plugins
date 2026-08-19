@@ -17,7 +17,7 @@ logger = logging.getLogger("proxmox-ve-monitor")
 # Prefixed with PLUGIN_ loaded from environment
 PVE_URL = os.getenv("PLUGIN_PVE_URL", "https://192.168.0.142:8006/api2/json/")
 PVE_USER = os.getenv("PLUGIN_PVE_USER", "root@pam")
-PVE_TOKEN_ID = os.getenv("PLUGIN_PVE_TOKEN_ID")
+PVE_TOKEN_NAME = os.getenv("PLUGIN_PVE_TOKEN_NAME", "HomePulse")
 PVE_TOKEN_SECRET = os.getenv("PLUGIN_PVE_TOKEN_SECRET")
 PVE_NODE = os.getenv("PLUGIN_PVE_NODE", "pve")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
@@ -29,7 +29,7 @@ PLUGIN_TOKEN = os.getenv("PLUGIN_TOKEN")
 
 # Headers for Proxmox API connection (API Token Auth)
 PVE_HEADERS = {
-    "Authorization": f"PVEAPIToken={PVE_TOKEN_ID}={PVE_TOKEN_SECRET}",
+    "Authorization": f"PVEAPIToken={PVE_USER}!{PVE_TOKEN_NAME}={PVE_TOKEN_SECRET}",
     "Accept": "application/json"
 }
 
@@ -210,8 +210,8 @@ def fetch_and_report_metrics():
 def main():
     logger.info("Initializing Proxmox VE Monitor Plugin loop...")
     
-    if not PVE_TOKEN_ID or not PVE_TOKEN_SECRET:
-        msg = "Missing required authentication settings: PLUGIN_PVE_TOKEN_ID and PLUGIN_PVE_TOKEN_SECRET must be defined."
+    if not PVE_TOKEN_NAME or not PVE_TOKEN_SECRET:
+        msg = "Missing required authentication settings: PLUGIN_PVE_TOKEN_NAME and PLUGIN_PVE_TOKEN_SECRET must be defined."
         logger.error(msg)
         send_log_to_gateway("FATAL", msg)
         send_state_to_gateway("status", "Proxmox Connection Status", "binary_sensor", "OFFLINE", {

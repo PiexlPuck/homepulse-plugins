@@ -17,7 +17,8 @@ logger = logging.getLogger("proxmox-backup-monitor")
 # Prefixed with PLUGIN_ loaded from environment
 PBS_URL = os.getenv("PLUGIN_PBS_URL", "https://192.168.0.142:8007/api2/json/")
 PBS_NODE = os.getenv("PLUGIN_PBS_NODE", "localhost")
-PBS_TOKEN_ID = os.getenv("PLUGIN_PBS_TOKEN_ID")
+PBS_USER = os.getenv("PLUGIN_PBS_USER", "root@pam")
+PBS_TOKEN_NAME = os.getenv("PLUGIN_PBS_TOKEN_NAME", "HomePulse")
 PBS_TOKEN_SECRET = os.getenv("PLUGIN_PBS_TOKEN_SECRET")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
 
@@ -29,7 +30,7 @@ PLUGIN_TOKEN = os.getenv("PLUGIN_TOKEN")
 # Headers for Proxmox Backup Server API connection (API Token Auth)
 # Header Format: Authorization: PBSAPIToken=username@realm!tokenid:tokensecret
 PBS_HEADERS = {
-    "Authorization": f"PBSAPIToken={PBS_TOKEN_ID}:{PBS_TOKEN_SECRET}",
+    "Authorization": f"PBSAPIToken={PBS_USER}!{PBS_TOKEN_NAME}:{PBS_TOKEN_SECRET}",
     "Accept": "application/json"
 }
 
@@ -345,8 +346,8 @@ def fetch_and_report_metrics():
 def main():
     logger.info("Initializing Proxmox Backup Server Monitor loop...")
     
-    if not PBS_TOKEN_ID or not PBS_TOKEN_SECRET:
-        msg = "Missing required authentication settings: PLUGIN_PBS_TOKEN_ID and PLUGIN_PBS_TOKEN_SECRET must be defined."
+    if not PBS_TOKEN_NAME or not PBS_TOKEN_SECRET:
+        msg = "Missing required authentication settings: PLUGIN_PBS_TOKEN_NAME and PLUGIN_PBS_TOKEN_SECRET must be defined."
         logger.error(msg)
         send_log_to_gateway("FATAL", msg)
         send_state_to_gateway("status", "PBS Connection Status", "binary_sensor", "OFFLINE", {

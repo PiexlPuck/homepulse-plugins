@@ -23,10 +23,11 @@
       "default": "root@pam",
       "label": "PVE Username"
     },
-    "pve_token_id": {
+    "pve_token_name": {
       "type": "string",
       "required": true,
-      "label": "API Token ID (username@realm!tokenid)"
+      "default": "HomePulse",
+      "label": "PVE API Token Name"
     },
     "pve_token_secret": {
       "type": "password",
