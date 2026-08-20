@@ -1,0 +1,54 @@
+{
+    "id": "unifi-connect-monitor",
+    "name": "UniFi Connect Monitor",
+    "version": "1.0.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "unifi_url": {
+            "type": "string",
+            "required": true,
+            "default": "https://192.168.1.1/",
+            "label": "UniFi Console Base URL"
+        },
+        "unifi_user": {
+            "type": "string",
+            "required": true,
+            "default": "admin",
+            "label": "UniFi Local Admin Username"
+        },
+        "unifi_password": {
+            "type": "password",
+            "required": true,
+            "label": "UniFi Local Admin Password"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    },
+    "entities": {
+        "unifi-connect-displays": {
+            "name": "UniFi Connect Displays",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "id",
+                    "name",
+                    "model",
+                    "status",
+                    "uptime"
+                ]
+            }
+        }
+    }
+}

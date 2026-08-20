@@ -1,0 +1,59 @@
+{
+    "id": "unifi-access-monitor",
+    "name": "UniFi Access Monitor",
+    "version": "1.0.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "unifi_url": {
+            "type": "string",
+            "required": true,
+            "default": "https://192.168.1.1/",
+            "label": "UniFi Console Base URL"
+        },
+        "unifi_api_key": {
+            "type": "password",
+            "required": true,
+            "label": "UniFi Access API Key"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    },
+    "entities": {
+        "unifi-access-devices": {
+            "name": "UniFi Access Devices",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "name",
+                    "device_type",
+                    "connection_status",
+                    "ip"
+                ]
+            }
+        },
+        "unifi-access-events": {
+            "name": "UniFi Access Events Log",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "door",
+                    "event_type",
+                    "user"
+                ]
+            }
+        }
+    }
+}

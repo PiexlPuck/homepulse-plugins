@@ -1,0 +1,41 @@
+{
+    "id": "unifi-talk-monitor",
+    "name": "UniFi Talk Monitor",
+    "version": "1.0.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "sip_webhook_url": {
+            "type": "string",
+            "required": false,
+            "default": "",
+            "label": "SIP Webhook Endpoint (optional)"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    },
+    "entities": {
+        "unifi-talk-active-lines": {
+            "name": "UniFi Talk Active Lines",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "number",
+                    "name",
+                    "status"
+                ]
+            }
+        }
+    }
+}

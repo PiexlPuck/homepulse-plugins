@@ -1,0 +1,61 @@
+{
+    "id": "unifi-protect-monitor",
+    "name": "UniFi Protect Monitor",
+    "version": "1.0.0",
+    "author": "HomePulse Community",
+    "min_homepulse_version": "1.0.0",
+    "entrypoint": "main.py",
+    "ui_card": "assets/card.js",
+    "permissions": [
+        "network_outbound",
+        "host_metrics"
+    ],
+    "settings_schema": {
+        "unifi_url": {
+            "type": "string",
+            "required": true,
+            "default": "https://192.168.1.1/",
+            "label": "UniFi Console Base URL"
+        },
+        "unifi_api_key": {
+            "type": "password",
+            "required": true,
+            "label": "UniFi Protect API Key"
+        },
+        "interval": {
+            "type": "integer",
+            "required": false,
+            "default": 30,
+            "label": "Sync Interval (s)"
+        }
+    },
+    "entities": {
+        "unifi-protect-cameras": {
+            "name": "UniFi Protect Cameras",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "id",
+                    "name",
+                    "model",
+                    "connectionState",
+                    "mac"
+                ]
+            }
+        },
+        "unifi-protect-nvr": {
+            "name": "UniFi Protect NVR Disks",
+            "type": "sensor",
+            "ui_schema": {
+                "widget": "table",
+                "columns": [
+                    "name",
+                    "model",
+                    "size",
+                    "status"
+                ]
+            }
+        }
+    }
+}

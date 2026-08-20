@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <rect width="100" height="100" rx="15" fill="#18181b" stroke="#27272a" stroke-width="2"/>
+  <!-- Network AP Wave waves -->
+  <circle cx="50" cy="70" r="8" fill="#10b981"/>
+  <path d="M35 55 A 25 25 0 0 1 65 55" stroke="#10b981" stroke-width="6" stroke-linecap="round" fill="none"/>
+  <path d="M22 42 A 40 40 0 0 1 78 42" stroke="#10b981" stroke-width="6" stroke-linecap="round" fill="none"/>
+</svg>
