@@ -15,7 +15,16 @@ logging.basicConfig(
 logger = logging.getLogger("proxmox-ve-monitor")
 
 # Prefixed with PLUGIN_ loaded from environment
-PVE_URL = os.getenv("PLUGIN_PVE_URL", "https://192.168.0.142:8006/api2/json/")
+PVE_IP = os.getenv("PLUGIN_PVE_IP", os.getenv("PLUGIN_PVE_URL", "192.168.0.142")).strip()
+if not PVE_IP.startswith(("http://", "https://")):
+    if ":" not in PVE_IP:
+        PVE_URL = f"https://{PVE_IP}:8006/api2/json/"
+    else:
+        PVE_URL = f"https://{PVE_IP}/api2/json/"
+else:
+    PVE_URL = PVE_IP
+    if not PVE_URL.endswith("/api2/json/"):
+        PVE_URL = PVE_URL.rstrip('/') + "/api2/json/"
 PVE_USER = os.getenv("PLUGIN_PVE_USER", "root@pam")
 PVE_TOKEN_NAME = os.getenv("PLUGIN_PVE_TOKEN_NAME", "HomePulse")
 PVE_TOKEN_SECRET = os.getenv("PLUGIN_PVE_TOKEN_SECRET")

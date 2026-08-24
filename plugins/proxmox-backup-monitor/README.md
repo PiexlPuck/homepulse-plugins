@@ -22,7 +22,7 @@ For security, PBS tokens do not inherit any permissions by default. You must exp
 
 ## 3. Configuration Fields
 Specify these fields in the HomePulse Dashboard configuration UI:
-- **Proxmox Backup Server URL**: E.g. `https://192.168.15.100:8007/api2/json/`
+- **Proxmox Backup Server IP / Host**: The host IP address or hostname (default: `192.168.0.142`).
 - **PBS Node Name**: Hostname of the target PBS node (default: `localhost`).
 - **PBS Username**: E.g. `root@pam` (defaults to `root@pam`).
 - **PBS API Token Name**: E.g. `HomePulse` (defaults to `HomePulse`).

@@ -15,7 +15,16 @@ logging.basicConfig(
 logger = logging.getLogger("nginx-proxy-manager-monitor")
 
 # Prefixed with PLUGIN_ loaded from environment
-NPM_URL = os.getenv("PLUGIN_NPM_URL", "http://192.168.0.142:81/api")
+NPM_IP = os.getenv("PLUGIN_NPM_IP", os.getenv("PLUGIN_NPM_URL", "192.168.0.142")).strip()
+if not NPM_IP.startswith(("http://", "https://")):
+    if ":" not in NPM_IP:
+        NPM_URL = f"http://{NPM_IP}:81/api"
+    else:
+        NPM_URL = f"http://{NPM_IP}/api"
+else:
+    NPM_URL = NPM_IP
+    if not NPM_URL.endswith("/api"):
+        NPM_URL = NPM_URL.rstrip('/') + "/api"
 IDENTITY = os.getenv("PLUGIN_IDENTITY", "admin@example.com")
 SECRET = os.getenv("PLUGIN_SECRET")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))

@@ -24,6 +24,6 @@ You must generate a bearer API Token inside the Web UI:
 
 ## 2. Configuration Fields
 Specify these fields in the HomePulse Dashboard configuration UI:
-- **TrueNAS REST API URL**: The host URL (default: `http://192.168.0.100/api/v2.0/` or `https://192.168.0.100/`). The plugin automatically resolves this address to point to the `/websocket` communication path.
+- **TrueNAS IP / Host**: The host IP address or hostname (default: `192.168.0.100`). The plugin automatically resolves this to point to the `/websocket` communication path.
 - **TrueNAS API Key**: The token key credential generated inside the TrueNAS interface.
 - **Sync Interval (s)**: Metric polling timer in seconds (default: `30`s).

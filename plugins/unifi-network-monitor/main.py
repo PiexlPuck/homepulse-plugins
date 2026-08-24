@@ -15,7 +15,12 @@ logging.basicConfig(
 logger = logging.getLogger("unifi-network-monitor")
 
 # Settings loaded from environment
-UNIFI_URL = os.getenv("PLUGIN_UNIFI_URL", "https://192.168.1.1/")
+UNIFI_IP = os.getenv("PLUGIN_UNIFI_IP", os.getenv("PLUGIN_UNIFI_URL", "192.168.1.1")).strip()
+if not UNIFI_IP.startswith(("http://", "https://")):
+    UNIFI_URL = f"https://{UNIFI_IP}/"
+else:
+    UNIFI_URL = UNIFI_IP
+
 UNIFI_USER = os.getenv("PLUGIN_UNIFI_USER", "admin")
 UNIFI_PASSWORD = os.getenv("PLUGIN_UNIFI_PASSWORD")
 UNIFI_SITE_ID = os.getenv("PLUGIN_UNIFI_SITE_ID", "default")

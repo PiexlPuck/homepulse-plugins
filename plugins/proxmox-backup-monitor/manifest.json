@@ -1,7 +1,7 @@
 {
     "id": "proxmox-backup-monitor",
     "name": "Proxmox Backup Monitor",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
@@ -11,11 +11,11 @@
         "host_metrics"
     ],
     "settings_schema": {
-        "pbs_url": {
+        "pbs_ip": {
             "type": "string",
             "required": true,
-            "default": "https://192.168.0.142:8007/api2/json/",
-            "label": "Proxmox Backup Server URL"
+            "default": "192.168.0.142",
+            "label": "Proxmox Backup Server IP / Host"
         },
         "pbs_node": {
             "type": "string",

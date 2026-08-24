@@ -15,7 +15,16 @@ logging.basicConfig(
 logger = logging.getLogger("proxmox-backup-monitor")
 
 # Prefixed with PLUGIN_ loaded from environment
-PBS_URL = os.getenv("PLUGIN_PBS_URL", "https://192.168.0.142:8007/api2/json/")
+PBS_IP = os.getenv("PLUGIN_PBS_IP", os.getenv("PLUGIN_PBS_URL", "192.168.0.142")).strip()
+if not PBS_IP.startswith(("http://", "https://")):
+    if ":" not in PBS_IP:
+        PBS_URL = f"https://{PBS_IP}:8007/api2/json/"
+    else:
+        PBS_URL = f"https://{PBS_IP}/api2/json/"
+else:
+    PBS_URL = PBS_IP
+    if not PBS_URL.endswith("/api2/json/"):
+        PBS_URL = PBS_URL.rstrip('/') + "/api2/json/"
 PBS_NODE = os.getenv("PLUGIN_PBS_NODE", "localhost")
 PBS_USER = os.getenv("PLUGIN_PBS_USER", "root@pam")
 PBS_TOKEN_NAME = os.getenv("PLUGIN_PBS_TOKEN_NAME", "HomePulse")

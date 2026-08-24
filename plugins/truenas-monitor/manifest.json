@@ -1,7 +1,7 @@
 {
     "id": "truenas-monitor",
     "name": "TrueNAS Monitor",
-    "version": "1.1.4",
+    "version": "1.1.5",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
@@ -11,11 +11,11 @@
         "host_metrics"
     ],
     "settings_schema": {
-        "truenas_url": {
+        "truenas_ip": {
             "type": "string",
             "required": true,
-            "default": "http://192.168.0.100/api/v2.0/",
-            "label": "TrueNAS REST API URL"
+            "default": "192.168.0.100",
+            "label": "TrueNAS IP / Host"
         },
         "api_key": {
             "type": "password",

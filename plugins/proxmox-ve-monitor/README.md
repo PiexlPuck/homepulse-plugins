@@ -23,7 +23,7 @@ If you checked *Privilege Separation*, or if the user account requires role assi
 
 ## 3. Configuration Fields
 Specify these fields in the HomePulse Dashboard configuration UI:
-- **PVE API URL**: E.g. `https://192.168.0.100:8006/api2/json/`
+- **PVE IP / Host**: The host IP address or hostname (default: `192.168.0.142`).
 - **PVE Node Name**: Name of the target PVE host node (default: `pve`).
 - **PVE Username**: E.g. `root@pam` or dedicated local user account.
 - **PVE API Token Name**: E.g. `HomePulse` (defaults to `HomePulse`).

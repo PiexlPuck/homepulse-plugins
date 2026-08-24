@@ -15,7 +15,17 @@ logging.basicConfig(
 logger = logging.getLogger("synology-monitor")
 
 # Settings loaded from environment
-SYNOLOGY_URL = os.getenv("PLUGIN_SYNOLOGY_URL", "https://192.168.0.100:5001/webapi/")
+SYNOLOGY_IP = os.getenv("PLUGIN_SYNOLOGY_IP", os.getenv("PLUGIN_SYNOLOGY_URL", "192.168.0.100")).strip()
+if not SYNOLOGY_IP.startswith(("http://", "https://")):
+    if ":" not in SYNOLOGY_IP:
+        SYNOLOGY_URL = f"https://{SYNOLOGY_IP}:5001/webapi/"
+    else:
+        SYNOLOGY_URL = f"https://{SYNOLOGY_IP}/webapi/"
+else:
+    SYNOLOGY_URL = SYNOLOGY_IP
+    if not SYNOLOGY_URL.endswith("/webapi/"):
+        SYNOLOGY_URL = SYNOLOGY_URL.rstrip('/') + "/webapi/"
+
 SYNOLOGY_USER = os.getenv("PLUGIN_SYNOLOGY_USER", "admin")
 SYNOLOGY_PASSWORD = os.getenv("PLUGIN_SYNOLOGY_PASSWORD")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))

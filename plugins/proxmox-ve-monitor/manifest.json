@@ -1,7 +1,7 @@
 {
   "id": "proxmox-ve-monitor",
   "name": "Proxmox VE Monitor",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "author": "HomePulse Community",
   "min_homepulse_version": "1.0.0",
   "entrypoint": "main.py",
@@ -11,11 +11,11 @@
     "host_metrics"
   ],
   "settings_schema": {
-    "pve_url": {
+    "pve_ip": {
       "type": "string",
       "required": true,
-      "default": "https://192.168.0.142:8006/api2/json/",
-      "label": "Proxmox VE API URL"
+      "default": "192.168.0.142",
+      "label": "Proxmox VE IP / Host"
     },
     "pve_user": {
       "type": "string",

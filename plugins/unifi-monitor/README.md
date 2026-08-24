@@ -15,7 +15,7 @@ Define the following environment variables (or configure them in the HomePulse i
 
 | Setting | Env Variable | Type | Default | Description |
 |---|---|---|---|---|
-| `unifi_url` | `PLUGIN_UNIFI_URL` | String | `https://192.168.1.1/` | Base URL of UniFi OS Console / Controller |
+| `unifi_ip` | `PLUGIN_UNIFI_IP` | String | `192.168.1.1` | IP Address or Hostname of UniFi OS Console / Controller |
 | `unifi_user` | `PLUGIN_UNIFI_USER` | String | `admin` | Local username |
 | `unifi_password` | `PLUGIN_UNIFI_PASSWORD` | Password | (required) | Local password |
 | `interval` | `PLUGIN_INTERVAL` | Integer | `30` | Sync interval in seconds |

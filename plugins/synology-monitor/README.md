@@ -16,7 +16,7 @@ Define the following environment variables (or configure them in the HomePulse p
 
 | Setting | Env Variable | Type | Default | Description |
 |---|---|---|---|---|
-| `synology_url` | `PLUGIN_SYNOLOGY_URL` | String | `https://192.168.0.100:5001/webapi/` | URL base for Synology DSM Web API endpoint |
+| `synology_ip` | `PLUGIN_SYNOLOGY_IP` | String | `192.168.0.100` | IP Address or Hostname of Synology DSM |
 | `synology_user` | `PLUGIN_SYNOLOGY_USER` | String | `admin` | Local username |
 | `synology_password` | `PLUGIN_SYNOLOGY_PASSWORD` | Password | (required) | Local password |
 | `interval` | `PLUGIN_INTERVAL` | Integer | `30` | Sync interval in seconds |

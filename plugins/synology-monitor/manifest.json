@@ -1,7 +1,7 @@
 {
     "id": "synology-monitor",
     "name": "Synology Monitor",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": "HomePulse Community",
     "min_homepulse_version": "1.0.0",
     "entrypoint": "main.py",
@@ -11,11 +11,11 @@
         "host_metrics"
     ],
     "settings_schema": {
-        "synology_url": {
+        "synology_ip": {
             "type": "string",
             "required": true,
-            "default": "https://192.168.0.100:5001/webapi/",
-            "label": "Synology API base URL"
+            "default": "192.168.0.100",
+            "label": "Synology NAS IP / Host"
         },
         "synology_user": {
             "type": "string",

@@ -10,7 +10,7 @@ This plugin connects using JWT tokens via the NPM administrator login:
 
 ## 2. Configuration Fields
 Specify these fields in the HomePulse Dashboard configuration UI:
-- **NPM API URL**: The address of your NPM host including the `/api` route path (default: `http://192.168.0.142:81/api`).
+- **NPM IP / Host**: The host IP address or hostname (default: `192.168.0.142`).
 - **NPM Admin Email**: Administrative email login (default: `admin@example.com`).
 - **NPM Admin Password**: Login password.
 - **Sync Interval (s)**: Metric polling timer in seconds (default: `30`s).

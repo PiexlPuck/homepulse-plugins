@@ -18,7 +18,14 @@ logging.basicConfig(
 logger = logging.getLogger("truenas-monitor")
 
 # Prefixed with PLUGIN_ loaded from environment
-TRUENAS_URL = os.getenv("PLUGIN_TRUENAS_URL", "http://192.168.0.100/api/v2.0/")
+TRUENAS_IP = os.getenv("PLUGIN_TRUENAS_IP", os.getenv("PLUGIN_TRUENAS_URL", "192.168.0.100")).strip()
+if not TRUENAS_IP.startswith(("http://", "https://")):
+    TRUENAS_URL = f"https://{TRUENAS_IP}/api/v2.0/"
+else:
+    TRUENAS_URL = TRUENAS_IP
+    if not TRUENAS_URL.endswith("/api/v2.0/"):
+        TRUENAS_URL = TRUENAS_URL.rstrip('/') + "/api/v2.0/"
+
 API_KEY = os.getenv("PLUGIN_API_KEY")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
 
@@ -112,8 +119,13 @@ class TrueNASWSClient:
         if resp.get("msg") != "connected":
             raise Exception(f"WebSocket handshake failed, received: {resp}")
             
-        # Authenticate with API key
-        self.call("auth.login_with_api_key", [self.api_key])
+        # Authenticate with API key using auth.login_ex with mechanism API_KEY_PLAIN (recommended),
+        # falling back to auth.login_with_api_key in older versions.
+        try:
+            self.call("auth.login_ex", {"mechanism": "API_KEY_PLAIN", "api_key": self.api_key})
+        except Exception as e:
+            logger.info(f"auth.login_ex failed ({e}), trying legacy auth.login_with_api_key...")
+            self.call("auth.login_with_api_key", [self.api_key])
 
     def call(self, method, params=None):
         self.request_id += 1

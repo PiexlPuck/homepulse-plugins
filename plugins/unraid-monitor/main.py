@@ -15,7 +15,13 @@ logging.basicConfig(
 logger = logging.getLogger("unraid-monitor")
 
 # Prefixed with PLUGIN_ loaded from environment
-UNRAID_URL = os.getenv("PLUGIN_UNRAID_URL", "http://192.168.0.220/graphql")
+UNRAID_IP = os.getenv("PLUGIN_UNRAID_IP", os.getenv("PLUGIN_UNRAID_URL", "192.168.0.220")).strip()
+if not UNRAID_IP.startswith(("http://", "https://")):
+    UNRAID_URL = f"http://{UNRAID_IP}/graphql"
+else:
+    UNRAID_URL = UNRAID_IP
+    if not UNRAID_URL.endswith("/graphql"):
+        UNRAID_URL = UNRAID_URL.rstrip('/') + "/graphql"
 API_KEY = os.getenv("PLUGIN_API_KEY")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
 
@@ -108,9 +114,11 @@ def fetch_and_report_metrics():
           array {
             state
             capacity {
-              free
-              used
-              total
+              kilobytes {
+                free
+                used
+                total
+              }
             }
             disks {
               name
@@ -169,9 +177,10 @@ def fetch_and_report_metrics():
         if arrayStatus:
             state = arrayStatus.get("state", "UNKNOWN").upper()
             capacity = arrayStatus.get("capacity", {})
-            arr_free = capacity.get("free", 0)
-            arr_used = capacity.get("used", 0)
-            arr_total = capacity.get("total", 0)
+            kb = capacity.get("kilobytes", {})
+            arr_free = int(kb.get("free", 0)) * 1024
+            arr_used = int(kb.get("used", 0)) * 1024
+            arr_total = int(kb.get("total", 0)) * 1024
             arr_pct = round((arr_used / arr_total) * 100.0, 2) if arr_total > 0 else 0.0
             
             send_state_to_gateway("unraid-array-status", "Unraid Array Status", "sensor", state)

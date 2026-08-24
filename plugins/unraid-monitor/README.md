@@ -3,13 +3,19 @@
 This plugin monitors array status, disk temperatures, Docker container lists (including autostart configuration), VM lists (including autostart configurations), shares count, CPU load details, and virtualization counts on Unraid servers.
 
 ## 1. Local GraphQL API Access
-Unraid systems typically require a GraphQL backend API server configuration (such as Dynamix or standard Docker API setups) handling system queries:
-1. Ensure the GraphQL support server is active and accessible on your local network.
-2. Note the target URL (e.g., `http://<your-unraid-ip>/graphql`).
-3. Generate or retrieve the secure **API Key** required for authentication header tokens.
+Depending on your Unraid OS version, the GraphQL endpoint is enabled differently:
+
+* **Unraid OS 7.2+ (Native)**: 
+  1. Log in to the Unraid WebGUI.
+  2. Navigate to **Settings > Management Access > API Keys**.
+  3. Generate an API Key and copy its value.
+* **Unraid OS 6.10 to 7.1**:
+  1. Install the official **Unraid Connect** (formerly *My Servers*) plugin from the Apps tab.
+  2. Ensure the local GraphQL service is running and accessible on your local network.
+  3. Generate or retrieve the connection's secure **API Key** credentials.
 
 ## 2. Configuration Fields
 Specify these fields in the HomePulse Dashboard configuration UI:
-- **Unraid GraphQL API URL**: The full endpoint URL (default: `http://192.168.0.220/graphql`).
+- **Unraid IP / Host**: The host IP address or hostname (default: `192.168.0.220`).
 - **Unraid API Key**: The token key credential for GraphQL query headers.
 - **Sync Interval (s)**: Metric polling timer in seconds (default: `30`s).
