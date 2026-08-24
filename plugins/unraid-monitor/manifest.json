@@ -13,13 +13,13 @@
     "settings_schema": {
         "unraid_ip": {
             "type": "string",
-            "required": true,
+            "required": false,
             "default": "192.168.0.220",
             "label": "Unraid IP / Host"
         },
         "api_key": {
             "type": "password",
-            "required": true,
+            "required": false,
             "label": "Unraid API Key"
         },
         "interval": {

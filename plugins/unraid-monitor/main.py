@@ -288,13 +288,11 @@ def main():
 
     # Simple validations for authorization key existence
     if not API_KEY:
-        msg = "Missing required authentication settings: PLUGIN_API_KEY must be configured in environment."
-        logger.error(msg)
-        send_log_to_gateway("FATAL", msg)
-        send_state_to_gateway("status", "Unraid Connection Status", "binary_sensor", "OFFLINE", {
-            "error_message": msg
-        })
-        sys.exit(1)
+        msg = "Missing required authentication settings: PLUGIN_API_KEY is not configured. Entering idle sleep mode."
+        logger.info(msg)
+        # Avoid calling gateway logs/state to prevent HTTP 400/401 errors when token is missing/unconfigured
+        while True:
+            time.sleep(3600)
 
     while True:
         fetch_and_report_metrics()
