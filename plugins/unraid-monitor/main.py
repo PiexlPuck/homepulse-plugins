@@ -23,6 +23,8 @@ else:
     if not UNRAID_URL.endswith("/graphql"):
         UNRAID_URL = UNRAID_URL.rstrip('/') + "/graphql"
 API_KEY = os.getenv("PLUGIN_API_KEY")
+if API_KEY:
+    API_KEY = API_KEY.strip().strip('"').strip("'")
 INTERVAL = int(os.getenv("PLUGIN_INTERVAL", "30"))
 
 # Core injected variables
@@ -82,8 +84,25 @@ def send_log_to_gateway(level, message):
 def query_unraid_graphql(query_string):
     """Sends a POST request containing a GraphQL query to Unraid OS."""
     payload = {"query": query_string}
-    r = requests.post(UNRAID_URL, json=payload, headers=UNRAID_HEADERS, timeout=10)
-    r.raise_for_status()
+    r = None
+    try:
+        r = requests.post(UNRAID_URL, json=payload, headers=UNRAID_HEADERS, timeout=10)
+        # Attempt to capture GraphQL specific errors on HTTP non-200 responses
+        if r.status_code != 200:
+            try:
+                err_data = r.json()
+                if "errors" in err_data:
+                    err_msg = f"GraphQL API returned HTTP {r.status_code} with errors: {err_data['errors']}"
+                    logger.error(err_msg)
+                    raise ValueError(err_msg)
+            except Exception:
+                pass
+        r.raise_for_status()
+    except requests.exceptions.RequestException as req_err:
+        if r is not None and r.text:
+            logger.error(f"Unraid API Error response body (HTTP {r.status_code}): {r.text}")
+        raise req_err
+
     res_json = r.json()
     if "errors" in res_json:
         raise ValueError(f"GraphQL Errors present: {res_json['errors']}")
