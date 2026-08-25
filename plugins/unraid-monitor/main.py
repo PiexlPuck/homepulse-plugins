@@ -117,14 +117,18 @@ def fetch_and_report_metrics():
         # Combined GraphQL query to pull system status, array details, containers, and disks
         query_str = """
         query {
-          system {
-            hostname
-            version
-            uptime
+          info {
+            os {
+              hostname
+              release
+              uptime
+            }
             cpu {
               model
               cores
             }
+          }
+          metrics {
             memory {
               total
               free
@@ -146,18 +150,21 @@ def fetch_and_report_metrics():
               temp
             }
           }
-          dockerContainers {
-            id
-            names
-            state
-            status
-            autoStart
+          docker {
+            containers {
+              id
+              names
+              state
+              status
+              autoStart
+            }
           }
           vms {
-            id
-            name
-            state
-            autoStart
+            domains {
+              id
+              name
+              state
+            }
           }
         }
         """
@@ -165,31 +172,49 @@ def fetch_and_report_metrics():
         data = query_unraid_graphql(query_str)
         
         # 1. Parse System Metrics
-        system = data.get("system", {})
-        if system:
-            hostname = system.get("hostname", "unraid")
-            version = system.get("version", "Unknown")
-            uptime = system.get("uptime", 0)
-            
-            mem = system.get("memory", {})
-            mem_total = mem.get("total", 0)
-            mem_free = mem.get("free", 0)
-            mem_used = mem_total - mem_free
-            mem_pct = round((mem_used / mem_total) * 100.0, 2) if mem_total > 0 else 0.0
-            
-            send_state_to_gateway("unraid-system-status", "Unraid System Status", "binary_sensor", "ONLINE", {
-                "hostname": hostname,
-                "version": version,
-                "uptime_seconds": uptime,
-                "cpu_cores": system.get("cpu", {}).get("cores", 1),
-                "cpu_model": system.get("cpu", {}).get("model", "Unknown")
-            })
-            
-            send_state_to_gateway("unraid-memory", "Unraid Memory Usage", "sensor", mem_pct, {
-                "used_bytes": mem_used,
-                "total_bytes": mem_total,
-                "unit": "%"
-            })
+        info = data.get("info", {}) or {}
+        os_info = info.get("os", {}) or {}
+        cpu = info.get("cpu", {}) or {}
+        
+        hostname = os_info.get("hostname", "unraid")
+        version = os_info.get("release", "Unknown")
+        
+        # Calculate uptime in seconds if uptime is an ISO boot time string
+        uptime_seconds = 0
+        uptime_str = os_info.get("uptime")
+        if uptime_str:
+            try:
+                import datetime
+                clean_str = uptime_str.split('.')[0].rstrip('Z')
+                # Parse format like: 2026-08-25T10:00:00
+                boot_time = datetime.datetime.strptime(clean_str, "%Y-%m-%dT%H:%M:%S")
+                # Subtract boot_time from utcnow
+                uptime_seconds = int((datetime.datetime.utcnow() - boot_time).total_seconds())
+                if uptime_seconds < 0:
+                    uptime_seconds = 0
+            except Exception as e:
+                logger.warning(f"Could not parse Unraid boot time '{uptime_str}': {e}")
+                
+        metrics = data.get("metrics", {}) or {}
+        mem = metrics.get("memory", {}) or {}
+        mem_total = int(mem.get("total", 0))
+        mem_free = int(mem.get("free", 0))
+        mem_used = mem_total - mem_free
+        mem_pct = round((mem_used / mem_total) * 100.0, 2) if mem_total > 0 else 0.0
+        
+        send_state_to_gateway("unraid-system-status", "Unraid System Status", "binary_sensor", "ONLINE", {
+            "hostname": hostname,
+            "version": version,
+            "uptime_seconds": uptime_seconds,
+            "cpu_cores": cpu.get("cores", 1),
+            "cpu_model": cpu.get("model", "Unknown")
+        })
+        
+        send_state_to_gateway("unraid-memory", "Unraid Memory Usage", "sensor", mem_pct, {
+            "used_bytes": mem_used,
+            "total_bytes": mem_total,
+            "unit": "%"
+        })
 
         # 2. Parse Array Metrics
         arrayStatus = data.get("array", {})
@@ -231,37 +256,41 @@ def fetch_and_report_metrics():
                 )
 
         # 3. Parse Docker Containers
-        containers = data.get("dockerContainers", [])
-        if containers:
-            running_containers = sum(1 for c in containers if c.get("state", "").lower() == "running")
-            container_list = [
-                {
-                    "names": c.get("names", []),
-                    "state": c.get("state"),
-                    "status": c.get("status"),
-                    "auto_start": c.get("autoStart", False)
-                } for c in containers
-            ]
-            send_state_to_gateway("unraid-active-containers", "Unraid Active Containers", "sensor", running_containers, {
-                "total": len(containers),
-                "containers": container_list
-            })
+        docker_data = data.get("docker", {}) or {}
+        containers = docker_data.get("containers", []) if isinstance(docker_data, dict) else []
+        if not containers:
+            containers = []
+        running_containers = sum(1 for c in containers if c.get("state", "").lower() == "running")
+        container_list = [
+            {
+                "names": c.get("names", []),
+                "state": c.get("state"),
+                "status": c.get("status"),
+                "auto_start": c.get("autoStart", False)
+            } for c in containers
+        ]
+        send_state_to_gateway("unraid-active-containers", "Unraid Active Containers", "sensor", running_containers, {
+            "total": len(containers),
+            "containers": container_list
+        })
 
         # 4. Parse Virtual Machines (VMs)
-        vms = data.get("vms", [])
-        if vms:
-            running_vms = sum(1 for v in vms if v.get("state", "").lower() == "running")
-            vm_list = [
-                {
-                    "name": v.get("name"),
-                    "state": v.get("state"),
-                    "auto_start": v.get("autoStart", False)
-                } for v in vms
-            ]
-            send_state_to_gateway("unraid-active-vms", "Unraid Active VMs", "sensor", running_vms, {
-                "total": len(vms),
-                "vms": vm_list
-            })
+        vms_data = data.get("vms", {}) or {}
+        vms = vms_data.get("domains", []) if isinstance(vms_data, dict) else []
+        if not vms:
+            vms = []
+        running_vms = sum(1 for v in vms if v.get("state", "").lower() == "running")
+        vm_list = [
+            {
+                "name": v.get("name"),
+                "state": v.get("state"),
+                "auto_start": False  # autoStart not available on VmDomain
+            } for v in vms
+        ]
+        send_state_to_gateway("unraid-active-vms", "Unraid Active VMs", "sensor", running_vms, {
+            "total": len(vms),
+            "vms": vm_list
+        })
 
         # 5. Optional Share List Query (GraphQL defensive fetch)
         try:
